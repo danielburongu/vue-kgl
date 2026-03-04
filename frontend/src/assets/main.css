@@ -1,0 +1,172 @@
+/* ==========================================================================
+   Global Reset & Base Styles – 2026 Modern, Readable, Accessible
+   ========================================================================== */
+
+/* 1. Reset & Box Model */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* 2. Root & HTML Base */
+html {
+  font-size: 65%;                     /* 1rem = 10px base – easy calculations */
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+  height: 100%;
+}
+
+/* 3. Body – Main Typography Foundation */
+body {
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 2.1rem;                    /* 18px – comfortable default for 2026 */
+  line-height: 1.68;                    /* excellent readability */
+  font-weight: 400;                     /* balanced – not too light or heavy */
+  color: #0f172a;                       /* deep slate – high contrast */
+  background-color: #f8fafc;            /* clean light gray */
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  letter-spacing: -0.01em;              /* subtle modern tightening */
+}
+
+/* 4. Headings – Clear, modern hierarchy */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 0;
+  color: #0f172a;
+}
+
+h1 { font-size: 4.2rem; margin-bottom: 1.2rem; }
+h2 { font-size: 3.2rem; margin-bottom: 1rem; }
+h3 { font-size: 2.4rem; margin-bottom: 0.8rem; }
+h4 { font-size: 2rem; margin-bottom: 0.6rem; }
+h5 { font-size: 1.8rem; margin-bottom: 0.5rem; }
+h6 { font-size: 1.6rem; margin-bottom: 0.4rem; }
+
+/* 5. Reset common elements */
+p, figure, blockquote, dl, dd, ul, ol {
+  margin: 0;
+}
+
+ul, ol {
+  list-style: none;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* 6. Media & Embeds */
+img, picture, video, canvas, svg {
+  display: block;
+  max-width: 100%;
+}
+
+/* 7. Form Controls – Consistent & modern */
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  font-size: 1.8rem;
+  color: inherit;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.9rem 1.25rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+}
+
+button {
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+/* 8. Visually Hidden (accessibility) */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0,0,0,0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* 9. Modern Focus Style */
+:focus-visible {
+  outline: 3px solid #6366f1;
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* 10. Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #0f172a;
+    color: #e2e8f0;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: #f1f5f9;
+  }
+
+  input, textarea, select {
+    background: #1e293b;
+    color: #e2e8f0;
+    border-color: #334155;
+  }
+
+  input:focus, textarea:focus, select:focus {
+    border-color: #818cf8;
+    box-shadow: 0 0 0 4px rgba(129, 140, 248, 0.2);
+  }
+}
+
+/* 11. Mobile: Larger base font for readability */
+@media (max-width: 768px) {
+  body {
+    font-size: 1.9rem;                  /* 19px – very comfortable on phones */
+  }
+
+  h1 { font-size: 3.6rem; }
+  h2 { font-size: 2.8rem; }
+  h3 { font-size: 2.2rem; }
+}
+
+/* 12. Utility Classes */
+.container {
+  width: 100%;
+  max-width: 1440px;
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+}
+
+.text-center { text-align: center; }
+.text-muted { color: #6b7280; }
+
+/* 13. Smooth scroll & tap highlight */
+html {
+  scroll-behavior: smooth;
+}
+
+a, button {
+  -webkit-tap-highlight-color: transparent;
+}
