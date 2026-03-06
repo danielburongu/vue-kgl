@@ -1,7 +1,8 @@
 
 ---
 
-# Karibu Groceries LTD (Wholesale Internal Cereal Management System)
+# Karibu Groceries LTD 
+Wholesale Internal Cereal Management System
 
 ## Project Overview
 
