@@ -1,38 +1,40 @@
 // src/server.js
-import "dotenv/config";          //  dotenv.config()
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import mongoose from "mongoose";
 import dns from "node:dns/promises";
+import swaggerUi from "swagger-ui-express";          
+import swaggerSpec from "./config/swagger.js";        
 
-// Force reliable DNS servers (Cloudflare + Google)
+// reliable DNS servers (Cloudflare + Google)
 dns.setServers(["1.1.1.1", "1.0.0.1", "8.8.8.8", "8.8.4.4"]);
 console.log("DNS servers set to:", dns.getServers());
 
-// ───────────────────────────────────────────────
+
 // Import routes
-// ───────────────────────────────────────────────
+
 import authRoutes        from "./routes/authRoutes.js";
 import userRoutes        from "./routes/userRoutes.js";
 import procurementRoutes from "./routes/procurementRoutes.js";
 import salesRoutes       from "./routes/salesRoutes.js";
 
-// ───────────────────────────────────────────────
+
 // Initialize Express app
-// ───────────────────────────────────────────────
+
 const app = express();
 
-// ───────────────────────────────────────────────
+
 // Middleware
-// ───────────────────────────────────────────────
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || "http://localhost:5173", //  Vite default or frontend URL
+  origin: process.env.CORS_ORIGIN || "http://localhost:5173",
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
 
-app.use(express.json({ limit: "10mb" }));      // increase if you plan to accept larger payloads
+app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Basic health check endpoint
@@ -46,9 +48,22 @@ app.get("/health", (req, res) => {
   });
 });
 
-// ───────────────────────────────────────────────
+// Swagger UI Documentation                 
+app.use(
+  "/api-docs",
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    explorer: true,
+    swaggerOptions: {
+      persistAuthorization: true,           // keeps token after page refresh
+    },
+    customCss: ".swagger-ui .topbar { background-color: #1a365d; }",
+    customSiteTitle: "Karibu Groceries API",
+  })
+);
+
+
 // Routes
-// ───────────────────────────────────────────────
 app.use("/api/auth",        authRoutes);
 app.use("/api/users",       userRoutes);
 app.use("/api/procurement", procurementRoutes);
@@ -62,7 +77,7 @@ app.use((req, res) => {
   });
 });
 
-// Global error handler (must be last)
+// Global error handler
 app.use((err, req, res, next) => {
   console.error("[GLOBAL ERROR]", err);
 
@@ -76,9 +91,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ───────────────────────────────────────────────
 // MongoDB + Server startup
-// ───────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI;
 
@@ -89,24 +102,21 @@ if (!MONGO_URI) {
 
 mongoose
   .connect(MONGO_URI, {
-    // modern defaults (most are already default in mongoose 8+)
     serverSelectionTimeoutMS: 5000,
     socketTimeoutMS: 45000,
   })
   .then(() => {
-    console.log("╔════════════════════════════════════════════════════╗");
-    console.log("║             MongoDB Connected Successfully         ║");
-    console.log("╚════════════════════════════════════════════════════╝");
+
+    console.log(" MongoDB Connected Successfully ");
     console.log(`Environment:   ${process.env.NODE_ENV || "development"}`);
     console.log(`Port:          ${PORT}`);
     console.log(`MongoDB URI:   ${MONGO_URI.includes("mongodb+srv") ? "mongodb+srv://..." : MONGO_URI}`);
     console.log("Server starting...");
 
     app.listen(PORT, () => {
-      console.log("══════════════════════════════════════════════════════");
       console.log(`Server is running on http://localhost:${PORT}`);
       console.log(`Health check:  http://localhost:${PORT}/health`);
-      console.log("══════════════════════════════════════════════════════");
+      console.log(`API Docs:      http://localhost:${PORT}/api-docs`); 
     });
   })
   .catch((err) => {

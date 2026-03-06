@@ -131,7 +131,6 @@ onUnmounted(() => {
 
 .mobile-logo {
   background: linear-gradient(135deg, hsl(152, 90%, 24%));
-  -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 

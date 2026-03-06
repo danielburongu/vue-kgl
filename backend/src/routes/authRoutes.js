@@ -6,38 +6,137 @@ import { ipKeyGenerator } from "express-rate-limit";
 
 const router = express.Router();
 
-// ───────────────────────────────────────────────
-// Rate limiting — protects against brute-force attacks
-// ───────────────────────────────────────────────
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,          // 15 minutes
-  max: 10,                           // max 10 attempts per IP in window
-  message: {
-    success: false,
-    message: "Too many login/registration attempts from this IP. Try again later.",
-  },
-  standardHeaders: true,             // sends RateLimit-* headers
-  legacyHeaders: false,
-  statusCode: 429,                   // proper 429 Too Many Requests
+/**
+ * @swagger
+ * tags:
+ *   name: Authentication
+ *   description: User registration and login endpoints
+ */
 
-  // Use the official helper — handles IPv4 + IPv6 correctly
-  keyGenerator: ipKeyGenerator,
-});
-
-// Apply to all auth routes
-router.use(authLimiter);
-
-// ───────────────────────────────────────────────
-// Routes
-// ───────────────────────────────────────────────
-
-// POST /api/auth/register
+/**
+ * @swagger
+ * /auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     description: Creates a new user account (implementation in authController)
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - password
+ *               - role
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 format: password
+ *               role:
+ *                 type: string
+ *                 enum: [director, manager, agent]
+ *               branch:
+ *                 type: string
+ *                 enum: [Maganjo, Matugga]
+ *                 description: Required for manager/agent roles
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ *       400:
+ *         description: Invalid input or missing fields
+ *       409:
+ *         description: Email already in use
+ *       429:
+ *         description: Too many registration attempts
+ */
 router.post("/register", register);
 
-// POST /api/auth/login
+/**
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: Login user and get JWT token
+ *     description: Authenticates user and returns JWT access token
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *                 format: password
+ *     responses:
+ *       200:
+ *         description: Login successful - returns JWT token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 token:
+ *                   type: string
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     role:
+ *                       type: string
+ *                     branch:
+ *                       type: string
+ *       401:
+ *         description: Invalid credentials
+ *       429:
+ *         description: Too many login attempts
+ */
 router.post("/login", login);
 
-// quick health check 
+/**
+ * @swagger
+ * /auth/ping:
+ *   get:
+ *     summary: Health check for auth service
+ *     description: Simple endpoint to verify auth routes are reachable
+ *     tags: [Authentication]
+ *     responses:
+ *       200:
+ *         description: Auth service is alive
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ */
 router.get("/ping", (req, res) => {
   res.status(200).json({
     success: true,

@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from "vue-router"
 import { useAuthStore } from "@/stores/authStore"
 
 import Login from "@/views/Login.vue"
+import ForgotPassword from "@/views/ForgotPassword.vue"
 import MainLayout from "@/components/layout/MainLayout.vue"
 import Dashboard from "@/views/Dashboard.vue"
 import DirectorDashboard from "@/views/DirectorDashboard.vue"
@@ -9,7 +10,17 @@ import DirectorDashboard from "@/views/DirectorDashboard.vue"
 const routes = [
   {
     path: "/",
+    redirect: "/login",
+  },
+  {
+    path: "/login",
+    name: "Login",
     component: Login,
+  },
+  {
+    path: "/forgot-password",
+    name: "ForgotPassword",
+    component: ForgotPassword,
   },
   {
     path: "/",
@@ -55,7 +66,7 @@ router.beforeEach((to) => {
 
   // Not logged in
   if (to.meta.requiresAuth && !auth.token) {
-    return "/"
+    return "/login"
   }
 
   // Role-based access
@@ -63,11 +74,10 @@ router.beforeEach((to) => {
     const userRole = auth.user?.role
 
     if (!to.meta.roles.includes(userRole)) {
-      // Redirect based on role
       if (userRole === "director") return "/director"
       if (userRole === "manager") return "/dashboard"
       if (userRole === "agent") return "/dashboard"
-      return "/"
+      return "/login"
     }
   }
 

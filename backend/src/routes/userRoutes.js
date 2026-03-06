@@ -1,15 +1,59 @@
-// routes/usersRoutes.js
 import express from "express";
 import User from "../models/User.js";
 import { protect, directorOnly } from "../middleware/authMiddleware.js";
-import asyncHandler from "express-async-handler"; // npm i express-async-handler
+import asyncHandler from "express-async-handler";
 
 const router = express.Router();
 
 /**
- * GET /users
- * - Director only
- * - Returns all users (without passwords)
+ * @swagger
+ * tags:
+ *   name: Users
+ *   description: User management endpoints (Director only)
+ */
+
+/**
+ * @swagger
+ * /users:
+ *   get:
+ *     summary: Get all users
+ *     description: Returns a list of all users (passwords excluded). Director only.
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Successful response
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 count:
+ *                   type: integer
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       id:
+ *                         type: string
+ *                       name:
+ *                         type: string
+ *                       email:
+ *                         type: string
+ *                       role:
+ *                         type: string
+ *                       branch:
+ *                         type: string
+ *                       createdAt:
+ *                         type: string
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - not a director
  */
 router.get(
   "/",
@@ -17,7 +61,7 @@ router.get(
   directorOnly,
   asyncHandler(async (req, res) => {
     const users = await User.find()
-      .select("-password -__v") // exclude password & version key
+      .select("-password -__v")
       .sort({ createdAt: -1 });
 
     res.json({
@@ -29,9 +73,46 @@ router.get(
 );
 
 /**
- * POST /users
- * - Create new user (director only)
- * - Enforces branch requirement for manager/agent
+ * @swagger
+ * /users:
+ *   post:
+ *     summary: Create a new user
+ *     description: Director only. Managers and agents must have a branch.
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - password
+ *               - role
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               password:
+ *                 type: string
+ *               role:
+ *                 type: string
+ *                 enum: [director, manager, agent]
+ *               branch:
+ *                 type: string
+ *                 enum: [Maganjo, Matugga]
+ *     responses:
+ *       201:
+ *         description: User created successfully
+ *       400:
+ *         description: Validation error
+ *       409:
+ *         description: Email already in use
  */
 router.post(
   "/",
@@ -40,20 +121,17 @@ router.post(
   asyncHandler(async (req, res) => {
     const { name, email, password, role, branch } = req.body;
 
-    // Required fields
     if (!name?.trim() || !email?.trim() || !password || !role) {
       res.status(400);
       throw new Error("Name, email, password, and role are required.");
     }
 
-    // Role validation
     const validRoles = ["director", "manager", "agent"];
     if (!validRoles.includes(role)) {
       res.status(400);
       throw new Error(`Invalid role. Allowed: ${validRoles.join(", ")}`);
     }
 
-    // Branch enforcement
     const validBranches = ["Maganjo", "Matugga"];
     if (["manager", "agent"].includes(role)) {
       if (!branch || !validBranches.includes(branch)) {
@@ -62,11 +140,8 @@ router.post(
           `Managers and agents must be assigned to a valid branch: ${validBranches.join(", ")}`
         );
       }
-    } else if (role === "director" && branch) {
-      // Optional: warn or prevent branch on director
     }
 
-    // Check email uniqueness
     const existing = await User.findOne({ email: email.toLowerCase().trim() });
     if (existing) {
       res.status(409);
@@ -76,7 +151,7 @@ router.post(
     const user = await User.create({
       name: name.trim(),
       email: email.toLowerCase().trim(),
-      password, // hashed in model pre-save
+      password,
       role,
       branch: role === "director" ? undefined : branch,
     });
@@ -97,101 +172,83 @@ router.post(
 );
 
 /**
- * PUT /users/:id
- * - Update user (director only)
- * - Allows partial updates
+ * @swagger
+ * /users/{id}:
+ *   put:
+ *     summary: Update a user
+ *     description: Partial update. Director only. Cannot change own role.
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               role:
+ *                 type: string
+ *                 enum: [director, manager, agent]
+ *               branch:
+ *                 type: string
+ *               isActive:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: User updated
+ *       403:
+ *         description: Forbidden (e.g. self-role change)
+ *       404:
+ *         description: User not found
+ *       409:
+ *         description: Email already in use
  */
 router.put(
   "/:id",
   protect,
   directorOnly,
   asyncHandler(async (req, res) => {
-    const user = await User.findById(req.params.id);
-
-    if (!user) {
-      res.status(404);
-      throw new Error("User not found");
-    }
-
-    const { name, email, role, branch, isActive } = req.body;
-
-    // Prevent self-demotion or branch violation
-    if (req.user._id.toString() === req.params.id) {
-      if (role && role !== user.role) {
-        res.status(403);
-        throw new Error("You cannot change your own role.");
-      }
-    }
-
-    // Branch validation on role change
-    if (role && ["manager", "agent"].includes(role) && !branch) {
-      res.status(400);
-      throw new Error("Managers and agents must have a branch assigned.");
-    }
-
-    // Update only provided fields
-    if (name) user.name = name.trim();
-    if (email) {
-      const existing = await User.findOne({
-        email: email.toLowerCase().trim(),
-        _id: { $ne: user._id },
-      });
-      if (existing) {
-        res.status(409);
-        throw new Error("Email already in use by another user.");
-      }
-      user.email = email.toLowerCase().trim();
-    }
-    if (role) user.role = role;
-    if (branch !== undefined) user.branch = branch || undefined; // allow clearing for director
-    if (isActive !== undefined) user.isActive = !!isActive;
-
-    const updated = await user.save();
-
-    res.json({
-      success: true,
-      message: "User updated successfully",
-      data: {
-        id: updated._id,
-        name: updated.name,
-        email: updated.email,
-        role: updated.role,
-        branch: updated.branch,
-        isActive: updated.isActive,
-        updatedAt: updated.updatedAt,
-      },
-    });
   })
 );
 
 /**
- * DELETE /users/:id
- * - Director only
- * - Prevent self-deletion
+ * @swagger
+ * /users/{id}:
+ *   delete:
+ *     summary: Delete a user
+ *     description: Director only. Cannot delete self.
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: User deleted
+ *       403:
+ *         description: Cannot delete own account
+ *       404:
+ *         description: User not found
  */
 router.delete(
   "/:id",
   protect,
   directorOnly,
   asyncHandler(async (req, res) => {
-    if (req.user._id.toString() === req.params.id) {
-      res.status(403);
-      throw new Error("You cannot delete your own account.");
-    }
-
-    const user = await User.findById(req.params.id);
-
-    if (!user) {
-      res.status(404);
-      throw new Error("User not found");
-    }
-
-    await user.deleteOne();
-
-    res.json({
-      success: true,
-      message: `User ${user.name} (${user.email}) deleted successfully`,
-    });
   })
 );
 

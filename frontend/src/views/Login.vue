@@ -13,7 +13,7 @@
   </div>
 
   <h1 class="brand-title">Karibu Groceries</h1>
-  <p class="tagline">Smart Retail Management System</p>
+  <p class="tagline">Internal Retail Management System</p>
 </div>
 
         <!-- Login Form -->
@@ -45,7 +45,9 @@
           </div>
 
           <div class="forgot-link">
-            <a href="#" @click.prevent>Forgot password?</a>
+            <router-link to="/forgot-password">
+  Forgot password?
+</router-link>
           </div>
 
           <button

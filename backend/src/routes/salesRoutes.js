@@ -7,19 +7,69 @@ import asyncHandler from "express-async-handler";
 
 const router = express.Router();
 
-// Helper: Generate unique, readable receipt number
-const generateReceiptNumber = (branch) => {
-  const prefix = (branch || "UNK").slice(0, 3).toUpperCase();
-  const datePart = new Date().toISOString().slice(2, 10).replace(/-/g, "");
-  const random = Math.floor(10000 + Math.random() * 90000);
-  return `KGL-${prefix}-${datePart}-${random}`;
-};
+/**
+ * @swagger
+ * tags:
+ *   name: Sales
+ *   description: Sales recording, listing and credit payment management
+ */
 
 /**
- * CREATE NEW SALE
- * - Protected: only operations roles (agent/manager)
- * - Uses authenticated user's branch and ID
- * - Detailed logging + full error handling
+ * @swagger
+ * /sales:
+ *   post:
+ *     summary: Record a new sale
+ *     description: Creates cash or credit sale. Performs stock availability check.
+ *     tags: [Sales]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - produceName
+ *               - quantity
+ *               - pricePerKg
+ *               - saleType
+ *             properties:
+ *               produceName:
+ *                 type: string
+ *               produceType:
+ *                 type: string
+ *               quantity:
+ *                 type: number
+ *               pricePerKg:
+ *                 type: number
+ *               saleType:
+ *                 type: string
+ *                 enum: [cash, credit]
+ *               customerName:
+ *                 type: string
+ *               customerLocation:
+ *                 type: string
+ *               customerContact:
+ *                 type: string
+ *               customerNIN:
+ *                 type: string
+ *               dueDate:
+ *                 type: string
+ *                 format: date
+ *               agentName:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Sale recorded successfully
+ *       400:
+ *         description: Validation error or insufficient stock
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden (not operations role)
+ *       409:
+ *         description: Duplicate receipt number (very rare)
  */
 router.post(
   "/",
@@ -27,7 +77,6 @@ router.post(
   operationsOnly,
   asyncHandler(async (req, res) => {
     try {
-      // Debug logs (remove or reduce in production)
       console.log("[SALE CREATE] Payload received:", req.body);
       console.log("[SALE CREATE] Authenticated user:", {
         id: req.user._id.toString(),
@@ -50,7 +99,6 @@ router.post(
         agentName,
       } = req.body;
 
-      // 1. Input validation
       if (!produceName?.trim()) {
         res.status(400);
         throw new Error("Produce name is required.");
@@ -74,7 +122,6 @@ router.post(
         throw new Error("Sale type must be 'cash' or 'credit'.");
       }
 
-      // 2. Credit-specific validation
       if (saleType === "credit") {
         if (!customerName?.trim() || customerName.trim().length < 2) {
           res.status(400);
@@ -98,7 +145,6 @@ router.post(
         }
       }
 
-      // 3. Branch-specific stock check (safe access)
       const procuredResult = await Procurement.aggregate([
         { $match: { branch: req.user.branch, produceName } },
         { $group: { _id: null, total: { $sum: "$tonnage" } } },
@@ -116,7 +162,6 @@ router.post(
         throw new Error(`Insufficient stock. Only ${available.toFixed(1)} kg available in ${req.user.branch}.`);
       }
 
-      // 4. Create sale
       const totalAmount = qty * price;
 
       const sale = await Sale.create({
@@ -133,8 +178,8 @@ router.post(
         customerNIN: saleType === "credit" ? customerNIN?.trim() : undefined,
         dueDate: saleType === "credit" && dueDate ? new Date(dueDate) : undefined,
         agentName: agentName?.trim() || req.user.name || "Unknown Agent",
-        branch: req.user.branch,           // ← from authenticated user
-        recordedBy: req.user._id,          // ← required field - now always set
+        branch: req.user.branch,
+        recordedBy: req.user._id,
       });
 
       res.status(201).json({
@@ -181,9 +226,57 @@ router.post(
 );
 
 /**
- * GET SALES (paginated + filtered)
- * - Director: sees all branches
- * - Others: only own branch
+ * @swagger
+ * /sales:
+ *   get:
+ *     summary: Get sales records (paginated)
+ *     description: Director sees all branches; others see only own branch
+ *     tags: [Sales]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: produceName
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: saleType
+ *         schema:
+ *           type: string
+ *           enum: [cash, credit]
+ *       - in: query
+ *         name: isPaid
+ *         schema:
+ *           type: boolean
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date
+ *     responses:
+ *       200:
+ *         description: Paginated list of sales
+ *       401:
+ *         description: Unauthorized
  */
 router.get(
   "/",
@@ -242,7 +335,29 @@ router.get(
 );
 
 /**
- * MARK CREDIT SALE AS PAID
+ * @swagger
+ * /sales/{id}/pay:
+ *   put:
+ *     summary: Mark credit sale as paid
+ *     description: Only operations users can mark credit sales as paid
+ *     tags: [Sales]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Sale marked as paid
+ *       400:
+ *         description: Not a credit sale or already paid
+ *       403:
+ *         description: Not authorized for this branch
+ *       404:
+ *         description: Sale not found
  */
 router.put(
   "/:id/pay",
@@ -284,5 +399,13 @@ router.put(
     });
   })
 );
+
+// Helper: Generate unique, readable receipt number
+const generateReceiptNumber = (branch) => {
+  const prefix = (branch || "UNK").slice(0, 3).toUpperCase();
+  const datePart = new Date().toISOString().slice(2, 10).replace(/-/g, "");
+  const random = Math.floor(10000 + Math.random() * 90000);
+  return `KGL-${prefix}-${datePart}-${random}`;
+};
 
 export default router;
