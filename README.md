@@ -58,7 +58,7 @@ Displays the secure authentication form where users enter their credentials to a
 
 ![Login Page](./screenshots/login-page.png)
 
-## Features:
+### Features:
 
 * Email and password authentication
 
@@ -74,7 +74,7 @@ If users forget their password, they are instructed to contact the system admini
 
 ![Forgot Password](./screenshots/forgot-password.png)
 
-## Features:
+### Features:
 
 * Simple support message
 
@@ -93,7 +93,7 @@ Managers can view operational summaries and manage procurement records.
 ![Manager Dashboard](./screenshots/sales-dashboard.png)
 ![Manager Dashboard](./screenshots/sales-page.png)
 
-## Features:
+### Features:
 
 * View stock levels
 
@@ -110,7 +110,7 @@ Directors can view high-level reports across all branches.
 ![Director Dashboard](./screenshots/directors-dashboard.png)
 ![Directors Dashboard](./screenshots/user-management.png)
 
-## Features:
+### Features:
 
 * Cross-branch overview
 
@@ -171,56 +171,6 @@ frontend/
 ├── package.json
 └── vite.config.js
 ```
-
----
-
-## App Flow (Login → Role-based Dashboard)
-
-```text
-             ┌──────────────────────┐
-             │      Login Page      │
-             │ (Login.vue / Pinia)  │
-             └─────────┬────────────┘
-                       │
-             ┌─────────▼──────────┐
-             │ Authentication via │
-             │  authStore + JWT   │
-             └─────────┬──────────┘
-                       │
-          ┌────────────┴────────────┐
-          │                         │
- ┌────────▼────────┐       ┌────────▼─────────┐
- │ Invalid Login   │       │ Valid Login      │
- │ Show Error Msg  │       │ Redirect by Role │
- └────────┬────────┘       └────────┬─────────┘
-          │                         │
-          │                         │
-          │                ┌────────▼─────────┐
-          │                │ Director Role    │
-          │                │ DirectorDashboard│
-          │                └────────┬─────────┘
-          │                         │
-          │                ┌────────▼─────────┐
-          │                │ Manager Role     │
-          │                │ Dashboard.vue    │
-          │                │ + Procurement    │
-          │                └────────┬─────────┘
-          │                         │
-          │                ┌────────▼─────────┐
-          │                │ Sales Agent Role │
-          │                │ Dashboard.vue    │
-          │                │ + Sales only     │
-          │                └──────────────────┘
-          │
-          │
- ┌────────▼─────────┐
- │ Forgot Password  │
- │ ForgotPassword   │
- │ Message: Contact │
- │ Admin            │
- └──────────────────┘
-```
-
 ---
 
 ## API Architecture - Three Routers
@@ -320,9 +270,9 @@ Frontend runs at: `http://localhost:5173` (default Vite port)
 2. Login with valid credentials (created by Director)
 3. Users are redirected based on role:
 
-   * Directors → DirectorDashboard
-   * Managers → Dashboard + Procurement
-   * Sales Agents → Dashboard + Sales only
+   * Directors - DirectorDashboard
+   * Managers - Dashboard + Procurement
+   * Sales Agents - Dashboard + Sales only
 4. Forgot Password page displays message: **Contact Admin**
 
 ---
