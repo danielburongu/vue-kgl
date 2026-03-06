@@ -334,7 +334,7 @@ Frontend runs at: `http://localhost:5173` (default Vite port)
 * Helmet security headers
 * CORS configured
 * Rate limiting on sensitive endpoints
-* Input validation recommended
+* Input validation
 * `.env` secrets not committed
 
 ---
